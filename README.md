@@ -6,5 +6,5 @@ A simple web application that classifies mental health related text using machin
 
 - Web interface to input text
 - Machine learning model for classification
-- History of inputed and classified text
+- History of inputted and classified text
 - Designed for simplicity and learning
