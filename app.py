@@ -1,48 +1,16 @@
 import streamlit as st
 import joblib
 import pandas as pd
-import re
 from datetime import datetime
 import os
 
+# Page configuration
 st.set_page_config(
-    page_title="Mental Health Text Classifier",
-    page_icon="🧠",
+    page_title="Text Classification App",
+    page_icon="📝",
     layout="centered",
     initial_sidebar_state="expanded"
 )
-
-custom_stopwords = [
-    'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', "you're", "you've", "you'll", "you'd",
-    'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', "she's", 'her', 'hers', 'herself',
-    'it', "it's", 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this',
-    'that', "that'll", 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
-    'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while',
-    'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above',
-    'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once',
-    'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
-    'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don',
-    "don't", 'should', "should've", 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren', "aren't", 'couldn', "couldn't",
-    'didn', "didn't", 'doesn', "doesn't", 'hadn', "hadn't", 'hasn', "hasn't", 'haven', "haven't", 'isn', "isn't", 'ma', 'mightn',
-    "mightn't", 'mustn', "mustn't", 'needn', "needn't", 'shan', "shan't", 'shouldn', "shouldn't", 'wasn', "wasn't", 'weren',
-    "weren't", 'won', "won't", 'wouldn', "wouldn't"
-]
-
-# Text preprocessing function
-def preprocess(input_text):
-    # Lowercasing
-    input_text = input_text.lower()
-
-    # Removing Punctuations
-    input_text = re.sub(r'[^\w\s]+', '', input_text)
-
-    # Removing custom stop words
-    input_words = input_text.split()
-    input_words = [word for word in input_words if word not in custom_stopwords]
-
-    cleaned_text = ' '.join(input_words)
-
-    return cleaned_text
 
 # Load the model
 @st.cache_resource
@@ -62,9 +30,9 @@ def init_history():
             return pd.read_csv('history.csv')
         except Exception as e:
             st.warning(f"Error loading history file: {e}. Starting with empty history.")
-            return pd.DataFrame(columns=["timestamp", "original_text", "processed_text", "prediction", "confidence_score"])
+            return pd.DataFrame(columns=["timestamp", "text", "prediction", "confidence_score"])
     else:
-        return pd.DataFrame(columns=["timestamp", "original_text", "processed_text", "prediction", "confidence_score"])
+        return pd.DataFrame(columns=["timestamp", "text", "prediction", "confidence_score"])
 
 # Save history to CSV
 def save_history(history_df):
@@ -78,17 +46,11 @@ if 'history_df' not in st.session_state:
     st.session_state.history_df = init_history()
 
 # Function to classify text
-def classify_text(original_text):
-    if model is not None and original_text.strip() != "":
+def classify_text(text):
+    if model is not None and text.strip() != "":
         try:
-            # Preprocess the text
-            processed_text = preprocess(original_text)
-            
-            if processed_text == "":
-                return "Empty after preprocessing", 0, 0, 0
-                
-            # Get classification probabilities
-            prediction_proba = model.predict_proba([processed_text])[0]
+            # Get classification probabilities directly without preprocessing
+            prediction_proba = model.predict_proba([text])[0]
             
             # Assuming binary classification: 0=Suicidal, 1=Depressed based on your example
             suicide_watch_percentage = prediction_proba[0] * 100
@@ -106,8 +68,7 @@ def classify_text(original_text):
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             new_entry = pd.DataFrame([{
                 "timestamp": timestamp,
-                "original_text": original_text,
-                "processed_text": processed_text,
+                "text": text,
                 "prediction": prediction,
                 "confidence_score": confidence
             }])
@@ -129,8 +90,8 @@ page = st.sidebar.radio("Navigation", ["Text Classification", "History"])
 
 # Main content based on selected page
 if page == "Text Classification":
-    st.title("Depression & Suicide Text Classification")
-    st.write("Enter text below to analyze the sentiment and classify it.")
+    st.title("Text Classification")
+    st.write("Enter text below to classify it using the pre-trained model.")
     
     # Input text
     text_input = st.text_area("Enter text to classify:", height=150)
@@ -159,23 +120,14 @@ if page == "Text Classification":
                         st.metric("Depressed", f"{depressed_pct:.2f}%")
                     with breakdown_cols[1]:
                         st.metric("Suicidal", f"{suicide_pct:.2f}%")
-                        
-                    # Show preprocessed text
-                    with st.expander("View Preprocessed Text"):
-                        st.code(preprocess(text_input))
         else:
             st.warning("Please enter some text to classify.")
     
     # Information about the model
     with st.expander("About the Model"):
         st.write("""
-        This application uses a pre-trained logistic regression model to classify text as either 
-        depressed or suicidal. The model is loaded from 'lr_model.joblib'.
-        
-        The text preprocessing steps include:
-        - Converting to lowercase
-        - Removing punctuation
-        - Removing common stopwords
+        This application uses a pre-trained model to classify text.
+        The model is loaded from 'lr_model.joblib'.
         """)
 
 elif page == "History":
@@ -187,8 +139,7 @@ elif page == "History":
             st.session_state.history_df,
             column_config={
                 "timestamp": "Time",
-                "original_text": "Original Text",
-                "processed_text": "Processed Text",
+                "text": "Text Input",
                 "prediction": "Classification",
                 "confidence_score": st.column_config.NumberColumn(
                     "Confidence",
@@ -200,7 +151,7 @@ elif page == "History":
         
         # Add a button to clear history
         if st.button("Clear History"):
-            st.session_state.history_df = pd.DataFrame(columns=["timestamp", "original_text", "processed_text", "prediction", "confidence_score"])
+            st.session_state.history_df = pd.DataFrame(columns=["timestamp", "text", "prediction", "confidence_score"])
             save_history(st.session_state.history_df)
             st.experimental_rerun()
             
@@ -217,4 +168,4 @@ elif page == "History":
 
 # Footer
 st.sidebar.markdown("---")
-st.sidebar.info("Depression & Suicide Text Classifier v1.0")
+st.sidebar.info("Text Classification App v1.0")
