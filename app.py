@@ -1,66 +1,136 @@
 import streamlit as st
 import joblib
 import pandas as pd
+import re
 from datetime import datetime
+import os
 
-# Page config
 st.set_page_config(
-    page_title='Text Classification App',
-    page_icon='📝',
-    layout='centerd',
-    initial_sidebar_state='expanded'
+    page_title="Mental Health Text Classifier",
+    page_icon="🧠",
+    layout="centered",
+    initial_sidebar_state="expanded"
 )
 
+custom_stopwords = [
+    'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', "you're", "you've", "you'll", "you'd",
+    'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', "she's", 'her', 'hers', 'herself',
+    'it', "it's", 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this',
+    'that', "that'll", 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+    'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while',
+    'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above',
+    'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once',
+    'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
+    'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don',
+    "don't", 'should', "should've", 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren', "aren't", 'couldn', "couldn't",
+    'didn', "didn't", 'doesn', "doesn't", 'hadn', "hadn't", 'hasn', "hasn't", 'haven', "haven't", 'isn', "isn't", 'ma', 'mightn',
+    "mightn't", 'mustn', "mustn't", 'needn', "needn't", 'shan', "shan't", 'shouldn', "shouldn't", 'wasn', "wasn't", 'weren',
+    "weren't", 'won', "won't", 'wouldn', "wouldn't"
+]
 
-# Load model
+# Text preprocessing function
+def preprocess(input_text):
+    # Lowercasing
+    input_text = input_text.lower()
+
+    # Removing Punctuations
+    input_text = re.sub(r'[^\w\s]+', '', input_text)
+
+    # Removing custom stop words
+    input_words = input_text.split()
+    input_words = [word for word in input_words if word not in custom_stopwords]
+
+    cleaned_text = ' '.join(input_words)
+
+    return cleaned_text
+
+# Load the model
 @st.cache_resource
 def load_model():
     try:
         return joblib.load('lr_model.joblib')
     except Exception as e:
-        st.error(f'Error loading model: {e}')
+        st.error(f"Error loading model: {e}")
         return None
-    
+
 model = load_model()
 
+# Initialize or load history from CSV
+def init_history():
+    if os.path.exists('history.csv'):
+        try:
+            return pd.read_csv('history.csv')
+        except Exception as e:
+            st.warning(f"Error loading history file: {e}. Starting with empty history.")
+            return pd.DataFrame(columns=["timestamp", "original_text", "processed_text", "prediction", "confidence_score"])
+    else:
+        return pd.DataFrame(columns=["timestamp", "original_text", "processed_text", "prediction", "confidence_score"])
 
-# Initialize session state for history
-if 'history' not in st.session_state:
-    st.session_state.history = []
+# Save history to CSV
+def save_history(history_df):
+    try:
+        history_df.to_csv('history.csv', index=False)
+    except Exception as e:
+        st.error(f"Error saving history: {e}")
 
+# Initialize history
+if 'history_df' not in st.session_state:
+    st.session_state.history_df = init_history()
 
 # Function to classify text
-def classify_text(text):
-    if model is not None:
+def classify_text(original_text):
+    if model is not None and original_text.strip() != "":
         try:
-            prediction = model.predict([text])[0]
-            prediction_proba = model.predict_proba([text])[0]
-            confidence = max(prediction_proba) * 100
+            # Preprocess the text
+            processed_text = preprocess(original_text)
             
-            # Add to history
+            if processed_text == "":
+                return "Empty after preprocessing", 0, 0, 0
+                
+            # Get classification probabilities
+            prediction_proba = model.predict_proba([processed_text])[0]
+            
+            # Assuming binary classification: 0=Suicidal, 1=Depressed based on your example
+            suicide_watch_percentage = prediction_proba[0] * 100
+            depressed_percentage = prediction_proba[1] * 100
+            
+            # Determine prediction class
+            if depressed_percentage > suicide_watch_percentage:
+                prediction = "Depressed"
+                confidence = depressed_percentage
+            else:
+                prediction = "Suicidal"
+                confidence = suicide_watch_percentage
+            
+            # Add to history DataFrame
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            st.session_state.history.append({
+            new_entry = pd.DataFrame([{
                 "timestamp": timestamp,
-                "text": text,
+                "original_text": original_text,
+                "processed_text": processed_text,
                 "prediction": prediction,
-                "confidence": confidence
-            })
+                "confidence_score": confidence
+            }])
             
-            return prediction, confidence
+            st.session_state.history_df = pd.concat([st.session_state.history_df, new_entry], ignore_index=True)
+            
+            # Save updated history
+            save_history(st.session_state.history_df)
+            
+            return prediction, confidence, depressed_percentage, suicide_watch_percentage
+            
         except Exception as e:
             st.error(f"Error during classification: {e}")
-            return None, None
-    return None, None
-
+            return None, None, None, None
+    return None, None, None, None
 
 # Sidebar for navigation
 page = st.sidebar.radio("Navigation", ["Text Classification", "History"])
 
-
 # Main content based on selected page
 if page == "Text Classification":
-    st.title("Text Classification")
-    st.write("Enter text below to classify it using the pre-trained model.")
+    st.title("Depression & Suicide Text Classification")
+    st.write("Enter text below to analyze the sentiment and classify it.")
     
     # Input text
     text_input = st.text_area("Enter text to classify:", height=150)
@@ -69,7 +139,7 @@ if page == "Text Classification":
     if st.button("Classify"):
         if text_input.strip() != "":
             with st.spinner("Classifying..."):
-                prediction, confidence = classify_text(text_input)
+                prediction, confidence, depressed_pct, suicide_pct = classify_text(text_input)
                 
                 if prediction is not None:
                     st.success(f"Classification complete!")
@@ -81,41 +151,70 @@ if page == "Text Classification":
                         st.metric("Prediction", prediction)
                     with col2:
                         st.metric("Confidence", f"{confidence:.2f}%")
+                    
+                    # Show probability breakdown
+                    st.subheader("Probability Breakdown:")
+                    breakdown_cols = st.columns(2)
+                    with breakdown_cols[0]:
+                        st.metric("Depressed", f"{depressed_pct:.2f}%")
+                    with breakdown_cols[1]:
+                        st.metric("Suicidal", f"{suicide_pct:.2f}%")
+                        
+                    # Show preprocessed text
+                    with st.expander("View Preprocessed Text"):
+                        st.code(preprocess(text_input))
         else:
             st.warning("Please enter some text to classify.")
     
     # Information about the model
     with st.expander("About the Model"):
         st.write("""
-        This application uses a pre-trained model to classify text.
-        The model is loaded from 'lr_model.joblib'.
+        This application uses a pre-trained logistic regression model to classify text as either 
+        depressed or suicidal. The model is loaded from 'lr_model.joblib'.
+        
+        The text preprocessing steps include:
+        - Converting to lowercase
+        - Removing punctuation
+        - Removing common stopwords
         """)
 
 elif page == "History":
     st.title("Classification History")
     
-    if st.session_state.history:
-        # Convert history to DataFrame for better display
-        history_df = pd.DataFrame(st.session_state.history)
-        
-        # Add a button to clear history
-        if st.button("Clear History"):
-            st.session_state.history = []
-            st.experimental_rerun()
-        
+    if not st.session_state.history_df.empty:
         # Display history table
         st.dataframe(
-            history_df,
+            st.session_state.history_df,
             column_config={
                 "timestamp": "Time",
-                "text": "Input Text",
+                "original_text": "Original Text",
+                "processed_text": "Processed Text",
                 "prediction": "Classification",
-                "confidence": st.column_config.NumberColumn(
+                "confidence_score": st.column_config.NumberColumn(
                     "Confidence",
                     format="%.2f%%"
                 )
             },
             hide_index=True
         )
+        
+        # Add a button to clear history
+        if st.button("Clear History"):
+            st.session_state.history_df = pd.DataFrame(columns=["timestamp", "original_text", "processed_text", "prediction", "confidence_score"])
+            save_history(st.session_state.history_df)
+            st.experimental_rerun()
+            
+        # Download history as CSV
+        csv = st.session_state.history_df.to_csv(index=False)
+        st.download_button(
+            label="Download History CSV",
+            data=csv,
+            file_name="classification_history.csv",
+            mime="text/csv",
+        )
     else:
         st.info("No classification history available. Classify some text first!")
+
+# Footer
+st.sidebar.markdown("---")
+st.sidebar.info("Depression & Suicide Text Classifier v1.0")
