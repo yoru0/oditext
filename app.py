@@ -2,11 +2,11 @@ import streamlit as st
 import joblib
 import pandas as pd
 from datetime import datetime
-import os
+import os, re
 
 # Page configuration
 st.set_page_config(
-    page_title="Text Classification App",
+    page_title="Mental Health Text Classification",
     page_icon="📝",
     layout="centered",
     initial_sidebar_state="expanded"
@@ -16,7 +16,7 @@ st.set_page_config(
 @st.cache_resource
 def load_model():
     try:
-        return joblib.load('lr_model.joblib')
+        return joblib.load('lr.joblib')
     except Exception as e:
         st.error(f"Error loading model: {e}")
         return None
@@ -49,20 +49,51 @@ if 'history_df' not in st.session_state:
 def classify_text(text):
     if model is not None and text.strip() != "":
         try:
-            # Get classification probabilities directly without preprocessing
+            custom_stopwords = [
+                'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', "you're", "you've", "you'll", "you'd",
+                'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', "she's", 'her', 'hers', 'herself',
+                'it', "it's", 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this',
+                'that', "that'll", 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+                'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while',
+                'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above',
+                'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once',
+                'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
+                'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don',
+                "don't", 'should', "should've", 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren', "aren't", 'couldn', "couldn't",
+                'didn', "didn't", 'doesn', "doesn't", 'hadn', "hadn't", 'hasn', "hasn't", 'haven', "haven't", 'isn', "isn't", 'ma', 'mightn',
+                "mightn't", 'mustn', "mustn't", 'needn', "needn't", 'shan', "shan't", 'shouldn', "shouldn't", 'wasn', "wasn't", 'weren',
+                "weren't", 'won', "won't", 'wouldn', "wouldn't"
+            ]
+
+            def preprocess(input_text):
+                # Lowercasing
+                input_text = input_text.lower()
+
+                # Removing Punctuations
+                input_text = re.sub(r'[^\w\s]+', '', input_text)
+
+                # Removing custom stop words
+                input_words = input_text.split()
+                input_words = [word for word in input_words if word not in custom_stopwords]
+
+                cleaned_text = ' '.join(input_words)
+
+                return cleaned_text
+
+            text = preprocess(text)
+
             prediction_proba = model.predict_proba([text])[0]
             
-            # Assuming binary classification: 0=Suicidal, 1=Depressed based on your example
-            suicide_watch_percentage = prediction_proba[0] * 100
+            normal_percentage = prediction_proba[0] * 100
             depressed_percentage = prediction_proba[1] * 100
             
             # Determine prediction class
-            if depressed_percentage > suicide_watch_percentage:
+            if depressed_percentage > normal_percentage:
                 prediction = "Depressed"
                 confidence = depressed_percentage
             else:
-                prediction = "Suicidal"
-                confidence = suicide_watch_percentage
+                prediction = "Normal"
+                confidence = normal_percentage
             
             # Add to history DataFrame
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -78,7 +109,7 @@ def classify_text(text):
             # Save updated history
             save_history(st.session_state.history_df)
             
-            return prediction, confidence, depressed_percentage, suicide_watch_percentage
+            return prediction, confidence, depressed_percentage, normal_percentage
             
         except Exception as e:
             st.error(f"Error during classification: {e}")
