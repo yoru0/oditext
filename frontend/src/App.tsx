@@ -4,7 +4,6 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import Home from "./page/Home";
 import History from "./page/History";
-import Navbar from "./components/Navbar";
 
 export default function App() {
   // const fetchAPI = async () => {
@@ -18,14 +17,10 @@ export default function App() {
 
   return (
     <Router>
-      <Navbar />
-      <div className="pt-16">
-        {" "}
-        <Routes>
-          <Route path="/home" element={<Home />} />
-          <Route path="/history" element={<History />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/home" element={<Home />} />
+        <Route path="/history" element={<History />} />
+      </Routes>
     </Router>
   );
 }
