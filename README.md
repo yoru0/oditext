@@ -7,10 +7,4 @@ A simple Streamlit web application that classifies mental health related text us
 - User-friendly interface
 
 ## Notes
-┌──────────────────┐      HTTPS/JSON      ┌───────────────────────┐
-│  React + TS FE   │ ◀──────────────────▶│  Python inference API │
-│  (Vite / Vercel) │                      │  (FastAPI + Uvicorn)  │
-└──────────────────┘                      └────────┬──────────────┘
-                                                 Docker
-                                                   │
-                                        Cloud Run / Render / Railway
+Lagi bingung
