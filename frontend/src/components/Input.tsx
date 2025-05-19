@@ -1,30 +1,38 @@
 import React, { useState } from "react";
 
 export default function Input() {
-  const [text,   setText]   = useState("");
-  const [result, setResult] = useState<string | null>(null);
-  const [error,  setError]  = useState<string | null>(null);
-  const [busy,   setBusy]   = useState(false);
+  const [text, setText] = useState("");
+  const [result, setResult] = useState<{ label: string; confidence: number; prediction: number } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const classify = async () => {
+  const handleClassify = async () => {
     if (!text.trim()) return;
-    setBusy(true);  setError(null);  setResult(null);
+    setLoading(true);
+    setErrorMsg(null);
+    setResult(null);
 
     try {
       const res = await fetch("http://localhost:8080/api/predict", {
-        method : "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body   : JSON.stringify({ text })
+        body: JSON.stringify({ text })
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Server error");
+      if (!res.ok) {
+        throw new Error(data.error ?? "Server error");
+      }
 
-      setResult(data.prediction ?? "No prediction");
+      setResult({
+        label: data.label,
+        confidence: data.confidence,
+        prediction: data.prediction
+      });
     } catch (err: any) {
-      setError(err.message);
+      setErrorMsg(err.message);
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
   };
 
@@ -36,25 +44,35 @@ export default function Input() {
 
       <textarea
         value={text}
-        onChange={e => setText(e.target.value)}
+        onChange={(e) => setText(e.target.value)}
         placeholder="Enter your text here..."
         className="w-full h-40 pl-5 pt-4 pr-5 pb-4 text-gray-800 bg-white border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-gray-200"
       />
 
       <div className="mt-4 flex justify-end">
         <button
-          onClick={classify}
-          disabled={busy}
+          onClick={handleClassify}
+          disabled={loading}
           className="px-7 py-3 text-sm font-medium text-white bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
         >
-          {busy ? "Classifying…" : "Classify"}
+          {loading ? "Classifying…" : "Classify"}
         </button>
       </div>
 
-      {error  && <p className="mt-4 text-red-600 text-center">{error}</p>}
-      {result && !error && (
-        <p className="mt-6 text-lg text-center">
-          <span className="font-semibold">Prediction:</span> {result}
+      {errorMsg && (
+        <p className="mt-4 text-red-600 text-center">{errorMsg}</p>
+      )}
+
+      {result && !errorMsg && (
+        <p
+          className={`mt-6 text-lg text-center font-medium ${
+            result.prediction === 1 ? "text-red-600" : "text-green-600"
+          }`}
+        >
+          Prediction: {result.label} <br />
+          <span className="text-gray-700 text-base">
+            (Confidence: {result.confidence}%)
+          </span>
         </p>
       )}
     </div>

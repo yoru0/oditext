@@ -56,8 +56,15 @@ def classify_text():
 
         prepped_text = clean_text(raw_text)
         prediction   = model.predict([prepped_text])[0]
+        proba = model.predict_proba([prepped_text])[0]
+        confidence = round(100 * max(proba), 2)
+        label = "Normal Text" if prediction == 0 else "Mental Health-related Text"
 
-        return jsonify({"prediction": str(prediction)})
+        return jsonify({
+            "prediction": int(prediction),
+            "label": label,
+            "confidence": confidence
+        })
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error": "Server crashed", "details": str(e)}), 500
