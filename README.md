@@ -7,4 +7,4 @@ A simple Streamlit web application that classifies mental health related text us
 - User-friendly interface
 
 ## Notes
-Lagi bingung
+Lagi bingung. Beneran bingung dah.
