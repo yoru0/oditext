@@ -1,20 +1,36 @@
 import os
 import re
-import jwt
 import joblib
 import sklearn
 import datetime
 import psycopg2
-import traceback
 
 from flask_cors import CORS
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from psycopg2.extras import RealDictCursor
 
+load_dotenv()
+
 # flask setup -----
 app = Flask(__name__)
-cors = CORS(app)
+CORS(app, resources={r"/api/": {"origins": ""}})
+
+# connect to database -----
+def get_connection():
+    try:
+        conn = psycopg2.connect(
+            user=os.getenv("user"),
+            password=os.getenv("password"),
+            host=os.getenv("host"),
+            port=os.getenv("port"),
+            dbname=os.getenv("dbname")
+        )
+        return conn
+    except Exception as e:
+        print("Failed to connect to the database:", e)
+        raise  # re-raise the exception for further debugging
+
 
 # load trained pipeline -----
 model = joblib.load("model.joblib")
@@ -39,6 +55,7 @@ custom_stopwords = [
     'dont', 'cant', 'couldnt', 'didnt', 'doesnt', 'hadnt', 'hasnt', 'havent', 'isnt', 'mightnt', 'mustnt', 'neednt', 'shant'
 ]
 
+# clean text -----
 def clean_text(text: str) -> str:
     text = text.lower()
     text = re.sub(r'[^\w\s]+', '', text)
@@ -73,6 +90,58 @@ def classify_text():
 @app.route("/api/ping")
 def ping():
     return "pong"
+
+# user Section
+def get_table_list():
+    try:
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public';
+                """)
+                return cursor.fetchall()
+    except Exception as e:
+        print(f"Failed to fetch table list: {e}")
+        return []
+
+# fetch all rows from a given table
+def fetch_table_data(table_name):
+    try:
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(f'SELECT * FROM "{table_name}";')
+                return cursor.fetchall()
+    except Exception as e:
+        return {"error": str(e)}
+
+# API: Get all data from all tables
+@app.route('/data', methods=['GET'])
+def get_all_data():
+    tables = get_table_list()
+    data = {}
+    for table in tables:
+        table_name = table['table_name']
+        data[table_name] = fetch_table_data(table_name)
+    return jsonify(data)
+
+# API: Get all table names
+@app.route('/getAllTable', methods=['GET'])
+def get_all_table():
+    tables = get_table_list()
+    return jsonify({"tables": [table['table_name'] for table in tables]})
+
+# API: Debug prints tables to console
+@app.route('/debug', methods=['POST'])
+def debug():
+    tables = get_table_list()
+    print("Tables in database:")
+    for table in tables:
+        print(table['table_name'])
+    return jsonify({"debug": "Printed to console"})
+
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=8080)

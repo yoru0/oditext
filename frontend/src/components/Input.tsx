@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 export default function Input() {
   const [text, setText] = useState("");
@@ -39,7 +39,7 @@ export default function Input() {
   return (
     <div className="w-full max-w-2xl mx-auto mt-12 p-6 bg-gray-100 rounded-xl shadow-md border border-gray-200">
       <h2 className="text-2xl font-semibold text-gray-800 mb-4 pl-3">
-        Text Classifier
+        Mental Health Text Classifier
       </h2>
 
       <textarea
