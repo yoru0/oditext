@@ -2,10 +2,10 @@ import os
 import re
 import joblib
 import sklearn
-import datetime
 import psycopg2
 
 from flask_cors import CORS
+from datetime import datetime
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from psycopg2.extras import RealDictCursor
@@ -14,7 +14,7 @@ load_dotenv()
 
 # flask setup -----
 app = Flask(__name__)
-CORS(app, resources={r"/api/": {"origins": ""}})
+CORS(app)
 
 # connect to database -----
 def get_connection():
@@ -72,10 +72,19 @@ def classify_text():
             return jsonify({"error": "No text provided"}), 400
 
         prepped_text = clean_text(raw_text)
-        prediction   = model.predict([prepped_text])[0]
+        prediction = model.predict([prepped_text])[0]
         proba = model.predict_proba([prepped_text])[0]
         confidence = round(100 * max(proba), 2)
         label = "Normal Text" if prediction == 0 else "Mental Health-related Text"
+
+        # with get_connection() as conn:
+        #     with conn.cursor() as cursor:
+        #         cursor.execute('''
+        #             INSERT INTO classification_history 
+        #             (text, prediction, label, confidence)
+        #             VALUES (%s, %s, %s, %s)
+        #         ''', (raw_text, int(prediction), label, confidence))
+        #         conn.commit()
 
         return jsonify({
             "prediction": int(prediction),
@@ -85,6 +94,10 @@ def classify_text():
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error": "Server crashed", "details": str(e)}), 500
+
+# history section -----
+# @app.route("/api/history", methods=["GET"])
+
 
 # health check -----
 @app.route("/api/ping")

@@ -1,5 +1,6 @@
-import React from "react";
-import Navbar from "../components/Navbar"; // adjust path if needed
+// import React from "react";
+import Navbar from "../components/Navbar";
+// import Hist from "../components/Hist";
 
 export default function HistoryPage() {
   return (
