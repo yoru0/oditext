@@ -115,7 +115,7 @@ def classify_text():
 
 # history section -----
 @app.route("/api/history", methods=["GET"])
-def get_historu():
+def get_history():
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
