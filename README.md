@@ -7,6 +7,7 @@ The main problem is it does not have a login nor register features, so every tex
 ## Features
 - Classify text using a machine learning model
 - View history of previous classifications
+- Delete text in history
 - User-friendly interface??
 
 ## Notes

@@ -142,6 +142,41 @@ def get_history():
         print(f"[DATABASE ERROR] {str(e)}")
         return jsonify({"error": "Failed to fetch history"}), 500
 
+# delete history item -----
+@app.route("/api/history/<int:item_id>", methods=["DELETE"])
+def delete_history_item(item_id):
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    '''
+                    DELETE FROM classification_history
+                    WHERE id = %s
+                    ''', (item_id,)
+                )
+                conn.commit()
+                return jsonify({"success": True})
+    except Exception as e:
+        print(f"[DATABASE ERROR] {str(e)}")
+        return jsonify({"error": "Failed to delete item"}), 500
+
+# delete all history -----
+@app.route("/api/history/all", methods=["DELETE"])
+def delete_all_history():
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    '''
+                    DELETE FROM classification_history
+                    '''
+                )
+                conn.commit()
+                return jsonify({"success": True, "deleted_count": cursor.rowcount})
+    except Exception as e:
+        print(f"[DATABASE ERROR] {str(e)}")
+        return jsonify({"error": "Failed to clear history"}), 500
+
 # health check -----
 @app.route("/api/ping")
 def ping():

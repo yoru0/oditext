@@ -11,7 +11,7 @@ export default function HistoryPage() {
           <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
             Text History
           </h1>
-          <div className="bg-gray-500 h-0.5 w-full"></div>
+          <div className="bg-gray-500 h-0.5 ml-4 mr-4"></div>
           <Hist />
         </div>
       </main>
