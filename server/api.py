@@ -3,6 +3,7 @@ import re
 import joblib
 import sklearn
 import psycopg2
+import numpy as np
 
 from flask_cors import CORS
 from datetime import datetime
@@ -14,6 +15,7 @@ load_dotenv()
 
 # flask setup -----
 app = Flask(__name__)
+# CORS(app, resources={r"/api/*": {"origins": "*"}})
 CORS(app)
 
 # connect to database -----
@@ -34,7 +36,7 @@ def get_connection():
 
 # load trained pipeline -----
 model = joblib.load("model.joblib")
-print("[DEBUG] model loaded:", type(model)) # should print sklearn.pipeline.Pipeline
+# print("[DEBUG] model loaded:", type(model)) # should print sklearn.pipeline.Pipeline
 
 # preprocessing -----
 custom_stopwords = [
@@ -77,14 +79,29 @@ def classify_text():
         confidence = round(100 * max(proba), 2)
         label = "Normal Text" if prediction == 0 else "Mental Health-related Text"
 
-        # with get_connection() as conn:
-        #     with conn.cursor() as cursor:
-        #         cursor.execute('''
-        #             INSERT INTO classification_history 
-        #             (text, prediction, label, confidence)
-        #             VALUES (%s, %s, %s, %s)
-        #         ''', (raw_text, int(prediction), label, confidence))
-        #         conn.commit()
+        with get_connection() as conn:
+            try:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        '''
+                        INSERT INTO classification_history 
+                        (text, prediction, label, confidence)
+                        VALUES (%s, %s, %s, %s)
+                        ''', (
+                        raw_text, 
+                        int(prediction),  # Ensure integer type
+                        str(label),       # Ensure string type
+                        float(confidence) # Ensure numeric type
+                    ))
+                    conn.commit()
+            except Exception as e:
+                conn.rollback()
+                print(f"[DATABASE ERROR] {str(e)}")
+
+        # print("[DEBUG] raw text:", raw_text)
+        # print("[DEBUG] prediction:", prediction)
+        # print("[DEBUG] label:", label)
+        # print("[DEBUG] confidence:", confidence)
 
         return jsonify({
             "prediction": int(prediction),
@@ -95,9 +112,35 @@ def classify_text():
         import traceback; traceback.print_exc()
         return jsonify({"error": "Server crashed", "details": str(e)}), 500
 
-# history section -----
-# @app.route("/api/history", methods=["GET"])
 
+# history section -----
+@app.route("/api/history", methods=["GET"])
+def get_historu():
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    '''
+                    SELECT id, text, prediction, label, confidence, timestamp
+                    FROM classification_history
+                    ORDER BY timestamp DESC
+                    '''
+                )
+                rows = cursor.fetchall()
+                history = []
+                for row in rows:
+                    history.append({
+                        "id": row[0],
+                        "text": row[1],
+                        "prediction": int(row[2]),
+                        "label": str(row[3]),
+                        "confidence": float(row[4]),
+                        "timestamp": row[5].strftime("%Y-%m-%d %H:%M:%S")
+                    })
+                return jsonify(history)
+    except Exception as e:
+        print(f"[DATABASE ERROR] {str(e)}")
+        return jsonify({"error": "Failed to fetch history"}), 500
 
 # health check -----
 @app.route("/api/ping")
@@ -153,7 +196,6 @@ def debug():
     for table in tables:
         print(table['table_name'])
     return jsonify({"debug": "Printed to console"})
-
 
 
 if __name__ == "__main__":
