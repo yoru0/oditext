@@ -4,6 +4,7 @@ import joblib
 import sklearn
 import psycopg2
 import numpy as np
+import xgboost as xgb
 
 from flask_cors import CORS
 from datetime import datetime
