@@ -1,13 +1,18 @@
 # General
 A simple website to classify whether a text is mental health related or not.
 The website is coded using react for frontend and flask for backend.
-And then it uses machine learning model to classify the text, in this case it uses logistic regression with around 92% test accuracy.
+And then it uses machine learning model to classify the text, in this case it uses voting classifier.
 The main problem is it does not have a login nor register features, so every text written will be stored in a single database and everyone can see the history.
+
+# Files & Folders
+- Frontend -> contains the source files such as assets, components, and page
+- Server -> contains the backend and model used (.joblib)
+- Python Notebook -> the models tested from voting classifier to lstm (model_selection.ipynb) 
 
 ## Features
 - Classify text using a machine learning model
 - View history of previous classifications
-- Delete text in history
+- Delete text in history (delete single or all)
 - User-friendly interface??
 
 ## Notes
@@ -39,6 +44,9 @@ cd server
 ```
 ```
 venv/Scripts/activate
+```
+```
+pip install -r requirements.txt
 ```
 ```
 python api.py
