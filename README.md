@@ -6,48 +6,38 @@ The main problem is it does not have a login nor register features, so every tex
 
 # Files & Folders
 - Frontend -> contains the source files such as assets, components, and page
-- Server -> contains the backend and model used (.joblib)
+- Server -> contains the backend (api.py) and model used (.joblib)
 - Python Notebook -> the models tested from voting classifier to lstm (model_selection.ipynb) 
 
-## Features
+# Features
 - Classify text using a machine learning model
 - View history of previous classifications
 - Delete text in history (delete single or all)
 - User-friendly interface??
 
-## Notes
-CoNfUsEd. I dOnT uNdErStAnD.
+# Notes
+Update - 22/5/2025 - Done?? Maybe...
+Update 2.0 - 26/5/2025 - Done???
 
-Update - 5/22/2025 - Done?? Maybe...
-
-## How to use
-Clone the repo
+# How to use
+## Clone repo in cmd
 ```
 git clone https://github.com/yoru0/Mental-Health-Classification.git
 ```
 
-Run frontend
+## Run frontend
 ```
 cd frontend
-```
-```
 npm install
-```
-```
 npm run dev
 ```
-And then just copy the local host and paste it on your browser
+Then copy the localhost and paste it on your browser
 
-Run server
+## Run server
 ```
 cd server
-```
-```
+python -m venv venv
 venv/Scripts/activate
-```
-```
 pip install -r requirements.txt
-```
-```
 python api.py
 ```

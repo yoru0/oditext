@@ -2,7 +2,7 @@ import { Home, History } from "lucide-react";
 import { NavLink, Link } from "react-router-dom";
 
 const navItems = [
-  { label: "Home", icon: Home, to: "/home" },
+  { label: "Home", icon: Home, to: "/" },
   { label: "History", icon: History, to: "/history" },
 ];
 
@@ -12,7 +12,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="mb-10 pl-5 mt-3">
         <Link
-          to="/home"
+          to="/"
           className="relative inline-block text-3xl font-semibold tracking-wide text-gray-900 hover:text-black transition-colors duration-300 group"
         >
           Odi
