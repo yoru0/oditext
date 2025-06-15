@@ -41,3 +41,7 @@ venv/Scripts/activate
 pip install -r requirements.txt
 python api.py
 ```
+
+## Preview
+![image](https://github.com/user-attachments/assets/1bdc6729-7d9c-42f7-b02b-8dd52fb7579a)
+![image](https://github.com/user-attachments/assets/3846a7a2-b12f-46b4-8899-e08f5b3551bd)
