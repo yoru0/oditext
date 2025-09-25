@@ -5,8 +5,8 @@ And then it uses machine learning model to classify the text, in this case it us
 The main problem is it does not have a login nor register features, so every text written will be stored in a single database and everyone can see the history.
 
 ## Files & Folders
-- Frontend -> contains the source files such as assets, components, and page
-- Server -> contains the backend (api.py) and model used (.joblib)
+- Web -> contains the source files such as assets, components, and page
+- Api -> contains the backend (api.py) and model used (.joblib)
 - Python Notebook -> the models tested from voting classifier to lstm (model_selection.ipynb) 
 
 ## Features
